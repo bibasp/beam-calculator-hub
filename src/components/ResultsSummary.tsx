@@ -1,11 +1,19 @@
 
-import { BeamResult } from "@/lib/types";
+import { BeamResult, Load, SupportType } from "@/lib/types";
+import { getRelevantFormulas } from "@/lib/beamFormulas";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import FormulaDisplay from "./FormulaDisplay";
 
 interface ResultsSummaryProps {
   results: BeamResult;
+  loads: Load[];
+  supports: {
+    left: SupportType;
+    right: SupportType;
+  };
 }
 
-const ResultsSummary = ({ results }: ResultsSummaryProps) => {
+const ResultsSummary = ({ results, loads, supports }: ResultsSummaryProps) => {
   // Find maximum values and their positions
   const findMaxAndPosition = (data: number[], positions: number[]) => {
     let maxIndex = 0;
@@ -28,6 +36,9 @@ const ResultsSummary = ({ results }: ResultsSummaryProps) => {
   const maxShear = findMaxAndPosition(results.shearForce, results.positions);
   const maxMoment = findMaxAndPosition(results.bendingMoment, results.positions);
   const maxAxial = findMaxAndPosition(results.axialForce, results.positions);
+  
+  // Get relevant formulas for the current beam configuration
+  const relevantFormulas = getRelevantFormulas(supports, loads);
   
   return (
     <div className="space-y-4">
@@ -81,6 +92,21 @@ const ResultsSummary = ({ results }: ResultsSummaryProps) => {
             </tbody>
           </table>
         </div>
+      </div>
+      
+      <div className="mt-6">
+        <Accordion type="single" collapsible className="w-full">
+          <AccordionItem value="formulas">
+            <AccordionTrigger className="text-lg font-medium">Applied Formulas</AccordionTrigger>
+            <AccordionContent>
+              <div className="space-y-4 pt-4">
+                {relevantFormulas.map((formula, index) => (
+                  <FormulaDisplay key={index} formula={formula} />
+                ))}
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
       </div>
     </div>
   );
