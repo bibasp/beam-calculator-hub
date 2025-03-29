@@ -1,6 +1,6 @@
 
 export type LoadType = "point" | "distributed" | "moment";
-export type SupportType = "fixed" | "pinned" | "roller";
+export type SupportType = "fixed" | "pinned" | "roller" | "cantilever" | "none";
 export type DiagramType = "SFD" | "BMD" | "AFD";
 
 export interface Load {

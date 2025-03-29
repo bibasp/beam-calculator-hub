@@ -1,4 +1,3 @@
-
 import { useEffect, useRef } from "react";
 import { Load, SupportType } from "@/lib/types";
 
@@ -58,6 +57,8 @@ const BeamCanvas = ({ beamLength, loads, supports }: BeamCanvasProps) => {
     
     // Draw supports
     const drawSupport = (position: "left" | "right", type: SupportType) => {
+      if (type === "none") return; // Don't draw anything for no support
+      
       const x = position === "left" ? padding : padding + beamWidth;
       
       if (type === "fixed") {
@@ -106,8 +107,53 @@ const BeamCanvas = ({ beamLength, loads, supports }: BeamCanvasProps) => {
         ctx.arc(cx2, beamY + 20, 5, 0, Math.PI * 2);
         ctx.fillStyle = "#2563eb";
         ctx.fill();
+      } else if (type === "cantilever") {
+        // Draw fixed support the same as fixed
+        ctx.beginPath();
+        ctx.moveTo(position === "left" ? x : x - 20, beamY - 20);
+        ctx.lineTo(position === "left" ? x : x - 20, beamY + 20);
+        ctx.lineWidth = 4;
+        ctx.strokeStyle = "#2563eb";
+        ctx.stroke();
+        
+        // Draw multiple small lines
+        for (let i = 0; i < 5; i++) {
+          ctx.beginPath();
+          ctx.moveTo(position === "left" ? x : x - 20, beamY - 15 + (i * 8));
+          ctx.lineTo(position === "left" ? x + 10 : x - 10, beamY - 15 + (i * 8));
+          ctx.lineWidth = 2;
+          ctx.strokeStyle = "#2563eb";
+          ctx.stroke();
+        }
       }
     };
+    
+    // Special handling for cantilever beam
+    const isCantileverLeft = supports.left === "fixed" && supports.right === "none";
+    const isCantileverRight = supports.right === "fixed" && supports.left === "none";
+
+    // Draw the appropriate cantilever end if needed
+    if (isCantileverLeft) {
+      // Draw a small diagonal line at the free end (right)
+      const freeEndX = padding + beamWidth;
+      ctx.beginPath();
+      ctx.moveTo(freeEndX, beamY - 10);
+      ctx.lineTo(freeEndX + 5, beamY);
+      ctx.lineTo(freeEndX, beamY + 10);
+      ctx.strokeStyle = "#94a3b8";
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    } else if (isCantileverRight) {
+      // Draw a small diagonal line at the free end (left)
+      const freeEndX = padding;
+      ctx.beginPath();
+      ctx.moveTo(freeEndX, beamY - 10);
+      ctx.lineTo(freeEndX - 5, beamY);
+      ctx.lineTo(freeEndX, beamY + 10);
+      ctx.strokeStyle = "#94a3b8";
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
     
     drawSupport("left", supports.left);
     drawSupport("right", supports.right);

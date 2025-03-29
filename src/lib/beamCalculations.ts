@@ -1,4 +1,3 @@
-
 import { Load, BeamResult, SupportType, SupportReaction } from "./types";
 
 // Number of points to use for diagrams
@@ -18,6 +17,11 @@ export const calculateBeamResults = (
     positions.push((i / DIAGRAM_POINTS) * beamLength);
   }
 
+  // Check for cantilever beam configuration
+  const isCantileverLeft = supports.left === "fixed" && supports.right === "none";
+  const isCantileverRight = supports.right === "fixed" && supports.left === "none";
+  const isCantilever = isCantileverLeft || isCantileverRight;
+
   // Calculate support reactions
   const reactions = calculateReactions(beamLength, loads, supports);
 
@@ -30,8 +34,8 @@ export const calculateBeamResults = (
   for (let i = 0; i < positions.length; i++) {
     const x = positions[i];
     
-    // Left support reactions
-    if (x > 0) {
+    // Left support reactions (if not cantilever with right support)
+    if (!isCantileverRight && x > 0) {
       // Vertical reaction affects shear
       shearForce[i] += reactions.left.vertical;
       
@@ -42,8 +46,8 @@ export const calculateBeamResults = (
       bendingMoment[i] += reactions.left.moment;
     }
     
-    // Right support reactions
-    if (x > beamLength) {
+    // Right support reactions (if not cantilever with left support)
+    if (!isCantileverLeft && x > beamLength) {
       // Vertical reaction affects shear
       shearForce[i] -= reactions.right.vertical;
       
@@ -181,8 +185,22 @@ const calculateReactions = (
     }
   });
   
+  // Check for cantilever configuration
+  const isCantileverLeft = supports.left === "fixed" && supports.right === "none";
+  const isCantileverRight = supports.right === "fixed" && supports.left === "none";
+  
   // Calculate reactions based on support types
-  if (supports.left === "fixed" && supports.right === "fixed") {
+  if (isCantileverLeft) {
+    // Cantilever beam with fixed left support
+    leftReaction.vertical = totalVerticalForce;
+    leftReaction.horizontal = totalHorizontalForce;
+    leftReaction.moment = totalMomentAtLeft;
+  } else if (isCantileverRight) {
+    // Cantilever beam with fixed right support
+    rightReaction.vertical = totalVerticalForce;
+    rightReaction.horizontal = totalHorizontalForce;
+    rightReaction.moment = totalMomentAtLeft - (totalVerticalForce * beamLength);
+  } else if (supports.left === "fixed" && supports.right === "fixed") {
     // For two fixed supports, we need to solve a more complex system
     // This is a simplified approach
     rightReaction.vertical = totalVerticalForce / 2;

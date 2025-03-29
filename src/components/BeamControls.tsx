@@ -15,7 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Load, SupportType, LoadType } from "@/lib/types";
-import { Check } from "lucide-react";
+import { Check, HelpCircle } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -53,6 +53,12 @@ const BeamControls = ({
     left: SupportType;
     right: SupportType;
   }>(supports);
+  
+  // State to track if we're in cantilever mode
+  const [beamType, setBeamType] = useState<"regular" | "cantilever-left" | "cantilever-right">(
+    supports.left === "cantilever" || supports.right === "none" ? "cantilever-left" :
+    supports.right === "cantilever" || supports.left === "none" ? "cantilever-right" : "regular"
+  );
 
   const handleBeamLengthChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = parseFloat(e.target.value);
@@ -91,14 +97,89 @@ const BeamControls = ({
 
   // New function to apply beam settings
   const applyBeamSettings = () => {
+    let leftSupport = tempSupports.left;
+    let rightSupport = tempSupports.right;
+    
+    // Update supports based on beam type
+    if (beamType === "cantilever-left") {
+      leftSupport = "fixed";
+      rightSupport = "none";
+    } else if (beamType === "cantilever-right") {
+      leftSupport = "none";
+      rightSupport = "fixed";
+    }
+    
     setBeamLength(tempBeamLength);
-    updateSupports(tempSupports.left, tempSupports.right);
+    updateSupports(leftSupport, rightSupport);
+  };
+
+  // Function to handle beam type change
+  const handleBeamTypeChange = (type: "regular" | "cantilever-left" | "cantilever-right") => {
+    setBeamType(type);
+    
+    // Update temp supports based on beam type
+    if (type === "cantilever-left") {
+      setTempSupports({ left: "fixed", right: "none" });
+    } else if (type === "cantilever-right") {
+      setTempSupports({ left: "none", right: "fixed" });
+    } else {
+      // If switching from cantilever to regular, set default supports
+      if (beamType !== "regular") {
+        setTempSupports({ left: "fixed", right: "roller" });
+      }
+    }
   };
 
   return (
     <div className="space-y-6">
       <div>
         <h3 className="text-lg font-medium mb-3">Beam Properties</h3>
+        
+        <div className="space-y-4 mb-4">
+          <div className="space-y-2">
+            <Label htmlFor="beamType">Beam Type</Label>
+            <div className="grid grid-cols-3 gap-2">
+              <Button
+                variant={beamType === "regular" ? "default" : "outline"}
+                onClick={() => handleBeamTypeChange("regular")}
+                className="w-full"
+              >
+                Regular
+              </Button>
+              
+              <Button
+                variant={beamType === "cantilever-left" ? "default" : "outline"}
+                onClick={() => handleBeamTypeChange("cantilever-left")}
+                className="w-full"
+              >
+                Cantilever (Left)
+              </Button>
+              
+              <Button
+                variant={beamType === "cantilever-right" ? "default" : "outline"}
+                onClick={() => handleBeamTypeChange("cantilever-right")}
+                className="w-full"
+              >
+                Cantilever (Right)
+              </Button>
+            </div>
+            
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="flex items-center text-xs text-gray-500 mt-1">
+                    <HelpCircle className="h-3 w-3 mr-1" />
+                    <span>What's a cantilever?</span>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent className="max-w-xs">
+                  <p>A cantilever beam is fixed at only one end, with the other end completely free.</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+        </div>
+        
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label htmlFor="beamLength">Beam Length (m)</Label>
@@ -111,42 +192,60 @@ const BeamControls = ({
               onChange={handleBeamLengthChange}
             />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="leftSupport">Left Support</Label>
-            <Select 
-              value={tempSupports.left} 
-              onValueChange={(value) => handleSupportChange("left", value)}
-            >
-              <SelectTrigger id="leftSupport">
-                <SelectValue placeholder="Select support type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="fixed">Fixed</SelectItem>
-                <SelectItem value="pinned">Pinned</SelectItem>
-                <SelectItem value="roller">Roller</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <Label>Units</Label>
-            <div className="bg-gray-100 p-2 rounded text-sm">kN, m, kNm</div>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="rightSupport">Right Support</Label>
-            <Select 
-              value={tempSupports.right} 
-              onValueChange={(value) => handleSupportChange("right", value)}
-            >
-              <SelectTrigger id="rightSupport">
-                <SelectValue placeholder="Select support type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="fixed">Fixed</SelectItem>
-                <SelectItem value="pinned">Pinned</SelectItem>
-                <SelectItem value="roller">Roller</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          
+          {beamType === "regular" && (
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="leftSupport">Left Support</Label>
+                <Select 
+                  value={tempSupports.left} 
+                  onValueChange={(value) => handleSupportChange("left", value)}
+                >
+                  <SelectTrigger id="leftSupport">
+                    <SelectValue placeholder="Select support type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="fixed">Fixed</SelectItem>
+                    <SelectItem value="pinned">Pinned</SelectItem>
+                    <SelectItem value="roller">Roller</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="space-y-2">
+                <Label>Units</Label>
+                <div className="bg-gray-100 p-2 rounded text-sm">kN, m, kNm</div>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="rightSupport">Right Support</Label>
+                <Select 
+                  value={tempSupports.right} 
+                  onValueChange={(value) => handleSupportChange("right", value)}
+                >
+                  <SelectTrigger id="rightSupport">
+                    <SelectValue placeholder="Select support type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="fixed">Fixed</SelectItem>
+                    <SelectItem value="pinned">Pinned</SelectItem>
+                    <SelectItem value="roller">Roller</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </>
+          )}
+          
+          {beamType !== "regular" && (
+            <div className="space-y-2">
+              <Label>Support Configuration</Label>
+              <div className="bg-gray-100 p-2 rounded text-sm">
+                {beamType === "cantilever-left" 
+                  ? "Fixed support on left, free end on right" 
+                  : "Free end on left, fixed support on right"}
+              </div>
+            </div>
+          )}
         </div>
         
         <TooltipProvider>
