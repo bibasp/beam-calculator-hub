@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -29,6 +30,7 @@ const BeamCalculator = () => {
   const [selectedDiagram, setSelectedDiagram] = useState<DiagramType>("SFD");
   const [isCalculating, setIsCalculating] = useState<boolean>(false);
 
+  // Calculate results when beam properties change
   useEffect(() => {
     if (loads.length > 0) {
       calculateResults();
@@ -75,12 +77,15 @@ const BeamCalculator = () => {
   const calculateResults = () => {
     setIsCalculating(true);
     try {
+      // Only use visible loads for calculations
       const visibleLoads = loads.filter(load => load.visible !== false);
       
+      // Convert angled loads into vertical and horizontal components
       const processedLoads: Load[] = visibleLoads.map(load => {
         if (load.type === "point" && load.angle && load.angle !== 0) {
           const angleRad = (load.angle * Math.PI) / 180;
           
+          // Create vertical component (positive downward)
           const verticalLoad: Load = {
             type: "point",
             position: load.position,
@@ -88,11 +93,13 @@ const BeamCalculator = () => {
             visible: true
           };
           
+          // Create horizontal component (positive to the right)
           const horizontalLoad: Load = {
             type: "point",
             position: load.position,
             magnitude: load.magnitude * Math.sin(angleRad),
             visible: true,
+            // Mark as horizontal for special handling in calculations
             angle: 90
           };
           
@@ -184,11 +191,7 @@ const BeamCalculator = () => {
             <Card>
               <CardContent className="pt-6">
                 {results ? (
-                  <ResultsSummary 
-                    results={results} 
-                    loads={loads.filter(load => load.visible !== false)}
-                    supports={supports}
-                  />
+                  <ResultsSummary results={results} />
                 ) : (
                   <div className="text-center py-10 text-gray-500">
                     {isCalculating ? (

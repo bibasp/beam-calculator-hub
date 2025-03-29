@@ -28,13 +28,3 @@ export interface BeamResult {
     right: SupportReaction;
   };
 }
-
-export interface FormulaDescription {
-  name: string;
-  formula: string;
-  description: string;
-  variables: {
-    symbol: string;
-    meaning: string;
-  }[];
-}
