@@ -15,6 +15,13 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Load, SupportType, LoadType } from "@/lib/types";
+import { Check } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface BeamControlsProps {
   beamLength: number;
@@ -40,10 +47,17 @@ const BeamControls = ({
   const [loadLength, setLoadLength] = useState<number>(2);
   const [loadAngle, setLoadAngle] = useState<number>(0); // 0 degrees = downward
 
+  // New states for temporary values
+  const [tempBeamLength, setTempBeamLength] = useState<number>(beamLength);
+  const [tempSupports, setTempSupports] = useState<{
+    left: SupportType;
+    right: SupportType;
+  }>(supports);
+
   const handleBeamLengthChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = parseFloat(e.target.value);
     if (value > 0) {
-      setBeamLength(value);
+      setTempBeamLength(value);
     }
   };
 
@@ -69,10 +83,16 @@ const BeamControls = ({
   const handleSupportChange = (position: "left" | "right", value: string) => {
     const supportType = value as SupportType;
     if (position === "left") {
-      updateSupports(supportType, supports.right);
+      setTempSupports({ ...tempSupports, left: supportType });
     } else {
-      updateSupports(supports.left, supportType);
+      setTempSupports({ ...tempSupports, right: supportType });
     }
+  };
+
+  // New function to apply beam settings
+  const applyBeamSettings = () => {
+    setBeamLength(tempBeamLength);
+    updateSupports(tempSupports.left, tempSupports.right);
   };
 
   return (
@@ -87,14 +107,14 @@ const BeamControls = ({
               type="number"
               min={1}
               step={0.5}
-              value={beamLength}
+              value={tempBeamLength}
               onChange={handleBeamLengthChange}
             />
           </div>
           <div className="space-y-2">
             <Label htmlFor="leftSupport">Left Support</Label>
             <Select 
-              value={supports.left} 
+              value={tempSupports.left} 
               onValueChange={(value) => handleSupportChange("left", value)}
             >
               <SelectTrigger id="leftSupport">
@@ -114,7 +134,7 @@ const BeamControls = ({
           <div className="space-y-2">
             <Label htmlFor="rightSupport">Right Support</Label>
             <Select 
-              value={supports.right} 
+              value={tempSupports.right} 
               onValueChange={(value) => handleSupportChange("right", value)}
             >
               <SelectTrigger id="rightSupport">
@@ -128,6 +148,23 @@ const BeamControls = ({
             </Select>
           </div>
         </div>
+        
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                onClick={applyBeamSettings} 
+                className="w-full mt-4"
+                variant="default"
+              >
+                <Check className="mr-2 h-4 w-4" /> Apply Beam Settings
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Apply beam length and support changes</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       </div>
 
       <div>
@@ -210,13 +247,22 @@ const BeamControls = ({
             )}
           </div>
 
-          <Button 
-            onClick={handleAddLoad} 
-            className="w-full"
-            variant="default"
-          >
-            Add Load
-          </Button>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  onClick={handleAddLoad} 
+                  className="w-full"
+                  variant="default"
+                >
+                  <Check className="mr-2 h-4 w-4" /> Add Load
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Add this load to the beam</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </div>
       </div>
     </div>
