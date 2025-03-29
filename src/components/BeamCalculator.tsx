@@ -58,6 +58,15 @@ const BeamCalculator = () => {
     setLoads(loads.filter((_, i) => i !== index));
   };
 
+  const toggleLoadVisibility = (index: number) => {
+    const updatedLoads = [...loads];
+    updatedLoads[index] = {
+      ...updatedLoads[index],
+      visible: updatedLoads[index].visible === false ? true : false
+    };
+    setLoads(updatedLoads);
+  };
+
   const updateSupports = (leftSupport: SupportType, rightSupport: SupportType) => {
     setSupports({
       left: leftSupport,
@@ -68,7 +77,39 @@ const BeamCalculator = () => {
   const calculateResults = () => {
     setIsCalculating(true);
     try {
-      const calculatedResults = calculateBeamResults(beamLength, loads, supports);
+      // Only use visible loads for calculations
+      const visibleLoads = loads.filter(load => load.visible !== false);
+      
+      // Convert angled loads into vertical and horizontal components
+      const processedLoads: Load[] = visibleLoads.map(load => {
+        if (load.type === "point" && load.angle && load.angle !== 0) {
+          const angleRad = (load.angle * Math.PI) / 180;
+          
+          // Create vertical component (positive downward)
+          const verticalLoad: Load = {
+            type: "point",
+            position: load.position,
+            magnitude: load.magnitude * Math.cos(angleRad),
+            visible: true
+          };
+          
+          // Create horizontal component (positive to the right)
+          const horizontalLoad: Load = {
+            type: "point",
+            position: load.position,
+            magnitude: load.magnitude * Math.sin(angleRad),
+            visible: true,
+            // Mark as horizontal for special handling in calculations
+            angle: 90
+          };
+          
+          return [verticalLoad, horizontalLoad];
+        }
+        
+        return [load];
+      }).flat();
+      
+      const calculatedResults = calculateBeamResults(beamLength, processedLoads, supports);
       setResults(calculatedResults);
     } catch (error) {
       toast({
@@ -97,7 +138,11 @@ const BeamCalculator = () => {
             
             <div className="mt-6">
               <h3 className="text-lg font-medium mb-3">Applied Loads</h3>
-              <LoadsList loads={loads} removeLoad={removeLoad} />
+              <LoadsList 
+                loads={loads} 
+                removeLoad={removeLoad}
+                toggleLoadVisibility={toggleLoadVisibility}
+              />
             </div>
           </CardContent>
         </Card>

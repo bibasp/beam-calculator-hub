@@ -114,30 +114,68 @@ const BeamCanvas = ({ beamLength, loads, supports }: BeamCanvasProps) => {
     
     // Draw loads
     loads.forEach(load => {
+      // Skip if load is not visible
+      if (load.visible === false) return;
+      
       const x = padding + (load.position * scale);
       
       if (load.type === "point") {
-        // Draw point load
+        // Get angle in radians (default 0 = vertical downward)
+        const angleRad = ((load.angle || 0) * Math.PI) / 180;
+        
+        // Calculate arrow length and end point
+        const arrowLength = 40;
+        const arrowEndX = x + arrowLength * Math.sin(angleRad);
+        const arrowEndY = beamY - 10 - arrowLength * Math.cos(angleRad);
+        
+        // Draw line
         ctx.beginPath();
         ctx.moveTo(x, beamY - 10);
-        ctx.lineTo(x, beamY - 40);
+        ctx.lineTo(arrowEndX, arrowEndY);
         ctx.lineWidth = 2;
         ctx.strokeStyle = "#e11d48";
         ctx.stroke();
         
-        // Draw arrow
+        // Calculate arrow head points
+        const headSize = 10;
+        const headAngle = Math.PI / 6; // 30 degrees
+        
+        // Arrow direction angle (pointing toward the beam)
+        const arrowAngle = angleRad + Math.PI;
+        
+        // Arrow head left point
+        const headLeftX = arrowEndX + headSize * Math.cos(arrowAngle - headAngle);
+        const headLeftY = arrowEndY + headSize * Math.sin(arrowAngle - headAngle);
+        
+        // Arrow head right point
+        const headRightX = arrowEndX + headSize * Math.cos(arrowAngle + headAngle);
+        const headRightY = arrowEndY + headSize * Math.sin(arrowAngle + headAngle);
+        
+        // Draw arrow head
         ctx.beginPath();
-        ctx.moveTo(x - 10, beamY - 30);
-        ctx.lineTo(x, beamY - 40);
-        ctx.lineTo(x + 10, beamY - 30);
+        ctx.moveTo(arrowEndX, arrowEndY);
+        ctx.lineTo(headLeftX, headLeftY);
+        ctx.lineTo(headRightX, headRightY);
+        ctx.closePath();
         ctx.fillStyle = "#e11d48";
         ctx.fill();
         
-        // Draw value
+        // Draw value with correct angle
         ctx.font = "12px Arial";
         ctx.fillStyle = "#e11d48";
         ctx.textAlign = "center";
-        ctx.fillText(`${load.magnitude}kN`, x, beamY - 50);
+        
+        // Position the text slightly away from the arrow end
+        const textOffset = 15;
+        const textX = arrowEndX + textOffset * Math.sin(angleRad);
+        const textY = arrowEndY - textOffset * Math.cos(angleRad);
+        
+        let angleText = "";
+        if (load.angle && load.angle !== 0) {
+          angleText = ` (${load.angle}°)`;
+        }
+        
+        ctx.fillText(`${load.magnitude}kN${angleText}`, textX, textY);
       } else if (load.type === "distributed") {
         const endX = padding + ((load.position + (load.length || 0)) * scale);
         
@@ -169,7 +207,7 @@ const BeamCanvas = ({ beamLength, loads, supports }: BeamCanvasProps) => {
           ctx.strokeStyle = "#e11d48";
           ctx.stroke();
           
-          // Draw arrowhead
+          // Draw arrowhead - now pointing downward
           ctx.beginPath();
           ctx.moveTo(arrowX - 5, beamY - 20);
           ctx.lineTo(arrowX, beamY - 10);

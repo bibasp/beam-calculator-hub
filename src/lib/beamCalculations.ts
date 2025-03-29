@@ -62,11 +62,17 @@ export const calculateBeamResults = (
     loads.forEach(load => {
       if (load.type === "point") {
         if (x > load.position) {
-          // Point load affects shear force
-          shearForce[i] -= load.magnitude;
-          
-          // Point load affects bending moment
-          bendingMoment[i] -= load.magnitude * (x - load.position);
+          // Check if this is a horizontal component (angle = 90)
+          if (load.angle === 90) {
+            // Horizontal load affects axial force
+            axialForce[i] += load.magnitude;
+          } else {
+            // Vertical or angled load affects shear force (vertical component)
+            shearForce[i] -= load.magnitude;
+            
+            // Vertical or angled load affects bending moment
+            bendingMoment[i] -= load.magnitude * (x - load.position);
+          }
         }
       } else if (load.type === "distributed" && load.length) {
         const loadEnd = load.position + load.length;
@@ -148,15 +154,21 @@ const calculateReactions = (
     moment: 0
   };
   
-  // Apply simple statics for vertical equilibrium and moment equilibrium
+  // Apply simple statics for equilibrium
   let totalVerticalForce = 0;
+  let totalHorizontalForce = 0;
   let totalMomentAtLeft = 0;
   
   // Calculate forces from loads
   loads.forEach(load => {
     if (load.type === "point") {
-      totalVerticalForce += load.magnitude;
-      totalMomentAtLeft += load.magnitude * load.position;
+      // Check if this is a horizontal component (angle = 90)
+      if (load.angle === 90) {
+        totalHorizontalForce += load.magnitude;
+      } else {
+        totalVerticalForce += load.magnitude;
+        totalMomentAtLeft += load.magnitude * load.position;
+      }
     } else if (load.type === "distributed" && load.length) {
       const totalForce = load.magnitude * load.length;
       totalVerticalForce += totalForce;
@@ -178,12 +190,21 @@ const calculateReactions = (
     
     leftReaction.moment = (totalMomentAtLeft - (rightReaction.vertical * beamLength)) / 2;
     rightReaction.moment = totalMomentAtLeft - leftReaction.moment - (leftReaction.vertical * beamLength);
+    
+    // Handle horizontal forces
+    if (totalHorizontalForce !== 0) {
+      leftReaction.horizontal = totalHorizontalForce / 2;
+      rightReaction.horizontal = totalHorizontalForce - leftReaction.horizontal;
+    }
   } else if (supports.left === "fixed") {
     // Right support takes some vertical load
     if (supports.right === "pinned" || supports.right === "roller") {
       rightReaction.vertical = totalMomentAtLeft / beamLength;
       leftReaction.vertical = totalVerticalForce - rightReaction.vertical;
       leftReaction.moment = totalMomentAtLeft - (rightReaction.vertical * beamLength);
+      
+      // All horizontal forces are taken by the fixed support
+      leftReaction.horizontal = totalHorizontalForce;
     }
   } else if (supports.right === "fixed") {
     // Left support takes some vertical load
@@ -191,20 +212,22 @@ const calculateReactions = (
       leftReaction.vertical = (totalMomentAtLeft - (totalVerticalForce * beamLength)) / (-beamLength);
       rightReaction.vertical = totalVerticalForce - leftReaction.vertical;
       rightReaction.moment = (leftReaction.vertical * beamLength) - totalMomentAtLeft;
+      
+      // All horizontal forces are taken by the fixed support
+      rightReaction.horizontal = totalHorizontalForce;
     }
   } else {
     // Simple beam with pinned/roller supports
     rightReaction.vertical = totalMomentAtLeft / beamLength;
     leftReaction.vertical = totalVerticalForce - rightReaction.vertical;
-  }
-  
-  // Handle horizontal reactions (for fixed supports)
-  if (supports.left === "fixed") {
-    leftReaction.horizontal = 0; // Simplified - would need to calculate from horizontal loads
-  }
-  
-  if (supports.right === "fixed") {
-    rightReaction.horizontal = 0; // Simplified - would need to calculate from horizontal loads
+    
+    // Handle horizontal forces - pinned support takes all horizontal forces
+    if (supports.left === "pinned") {
+      leftReaction.horizontal = totalHorizontalForce;
+    } else if (supports.right === "pinned") {
+      rightReaction.horizontal = totalHorizontalForce;
+    }
+    // If both are rollers, horizontal equilibrium is not satisfied
   }
   
   return {

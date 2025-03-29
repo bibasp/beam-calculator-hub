@@ -38,6 +38,7 @@ const BeamControls = ({
   const [loadPosition, setLoadPosition] = useState<number>(0);
   const [loadMagnitude, setLoadMagnitude] = useState<number>(10);
   const [loadLength, setLoadLength] = useState<number>(2);
+  const [loadAngle, setLoadAngle] = useState<number>(0); // 0 degrees = downward
 
   const handleBeamLengthChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = parseFloat(e.target.value);
@@ -50,11 +51,16 @@ const BeamControls = ({
     const newLoad: Load = {
       type: loadType,
       position: loadPosition,
-      magnitude: loadMagnitude
+      magnitude: loadMagnitude,
+      visible: true // New loads are visible by default
     };
 
     if (loadType === "distributed") {
       newLoad.length = loadLength;
+    }
+    
+    if (loadType === "point") {
+      newLoad.angle = loadAngle;
     }
 
     addLoad(newLoad);
@@ -184,6 +190,22 @@ const BeamControls = ({
                   value={loadLength}
                   onChange={(e) => setLoadLength(parseFloat(e.target.value))}
                 />
+              </div>
+            )}
+            
+            {loadType === "point" && (
+              <div className="space-y-2">
+                <Label htmlFor="loadAngle">Angle (degrees)</Label>
+                <Input
+                  id="loadAngle"
+                  type="number"
+                  min={-90}
+                  max={90}
+                  step={5}
+                  value={loadAngle}
+                  onChange={(e) => setLoadAngle(parseFloat(e.target.value))}
+                />
+                <p className="text-xs text-gray-500">0° = downward, ±90° = horizontal</p>
               </div>
             )}
           </div>
